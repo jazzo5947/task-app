@@ -3,7 +3,7 @@ import React from "react";
 import "@atlaskit/css-reset";
 import styled from "styled-components";
 import Column from "./Column";
-import { DragDropContext } from "react-beautiful-dnd";
+import { DragDropContext, Droppable } from "react-beautiful-dnd";
 
 const Container = styled.div`
   display: flex;
@@ -13,7 +13,7 @@ function App() {
   const [state, setState] = React.useState(initialData);
 
   const onDragEnd = (result) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
 
     setState({ ...state, homeIndex: null });
 
@@ -25,6 +25,18 @@ function App() {
     )
       return;
 
+    if (type === "column") {
+      const newColumnOrder = Array.from(state.columnOrder);
+      newColumnOrder.splice(source.index, 1);
+      newColumnOrder.splice(destination.index, 0, draggableId);
+
+      const newState = {
+        ...state,
+        columnOrder: newColumnOrder,
+      };
+      setState(newState);
+      return;
+    }
     const start = state.columns[source.droppableId];
     const finish = state.columns[destination.droppableId];
 
@@ -87,25 +99,37 @@ function App() {
 
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <Container>
-        {state.columnOrder.map((columnId, index) => {
-          const column = state.columns[columnId];
-          const tasks = column.taskIds.map((taskId) => state.tasks[taskId]);
+      <Droppable droppableId="all-columns" direction="horizontal" type="column">
+        {(provided, snapshot) => (
+          <Container {...provided.droppableProps} ref={provided.innerRef}>
+            {state.columnOrder.map((columnId, index) => {
+              const column = state.columns[columnId];
+              const tasks = column.taskIds.map((taskId) => state.tasks[taskId]);
 
-          const isDropDisabled = index < state.homeIndex;
+              const isDropDisabled = index < state.homeIndex;
 
-          return (
-            <Column
-              key={column.id}
-              column={column}
-              tasks={tasks}
-              isDropDisabled={isDropDisabled}
-            />
-          );
-        })}
-      </Container>
+              return (
+                <InnerList
+                  key={column.id}
+                  column={column}
+                  taskMap={tasks}
+                  index={index}
+                />
+              );
+            })}
+            {provided.placeholder}
+          </Container>
+        )}
+      </Droppable>
     </DragDropContext>
   );
 }
 
 export default App;
+
+const InnerList = React.memo(({ colKey, column, taskMap, index }) => {
+  // const column = state.columns[columnId];
+  const tasks = column.taskIds.map((taskId) => tasks[taskId]);
+
+  return <Column column={column} tasks={tasks} index={index} />;
+});

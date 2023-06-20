@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import Task from "./Task";
-import { Droppable } from "react-beautiful-dnd";
+import { Droppable, Draggable } from "react-beautiful-dnd";
 
 const Container = styled.div`
   margin: 8px;
@@ -10,6 +10,7 @@ const Container = styled.div`
 
   display: flex;
   flex-direction: column;
+  background-color: white;
 `;
 
 const Title = styled.h3`
@@ -24,28 +25,45 @@ const TaskList = styled.div`
   display: flex;
 `;
 
-export default function Column({ columnKey, column, tasks, isDropDisabled }) {
+export default function Column({
+  columnKey,
+  column,
+  tasks,
+  isDropDisabled,
+  index,
+}) {
   return (
-    <Container>
-      <Title>{column.title}</Title>
-      <Droppable
-        droppableId={column.id}
-        isDropDisabled={isDropDisabled}
-        direction="horizontal"
-      >
-        {(provided, snapshot) => (
-          <TaskList
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            isDraggingOver={snapshot.isDraggingOver}
+    <Draggable draggableId={column.id} index={index}>
+      {(provided) => (
+        <Container {...provided.draggableProps} ref={provided.innerRef}>
+          <Title {...provided.dragHandleProps}>{column.title}</Title>
+          <Droppable
+            droppableId={column.id}
+            isDropDisabled={isDropDisabled}
+            direction="horizontal"
+            type="task"
           >
-            {tasks.map((task, index) => (
-              <Task key={task.id} task={task} index={index} />
-            ))}
-            {provided.placeholder}
-          </TaskList>
-        )}
-      </Droppable>
-    </Container>
+            {(provided, snapshot) => (
+              <TaskList
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                isDraggingOver={snapshot.isDraggingOver}
+              >
+                <InnerList tasks={tasks} />
+                {provided.placeholder}
+              </TaskList>
+            )}
+          </Droppable>
+        </Container>
+      )}
+    </Draggable>
   );
 }
+
+const InnerList = React.memo(({ tasks }) => {
+  if (!tasks || tasks.length < 1) return;
+
+  return tasks.map((task, index) => (
+    <Task key={task.id} task={task} index={index} />
+  ));
+});
